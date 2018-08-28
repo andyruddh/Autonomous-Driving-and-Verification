@@ -1,0 +1,31 @@
+param dSafe = 5
+param T = 50
+
+# cars follow at safe distance
+safeGap := (LeadPosition[t] - HostPosition[t] >= dSafe)
+safeFollowing := alw_[0,T] (safeGap)
+
+# host car does not go backward
+forwardProgress := alw_[0,T] (HostVelocity[t] >= 0)
+
+# whenever host car is sufficient distance away, it reaches desired velocity
+param cruiseSpeed = 20
+param cruisePctTol = 0.1
+param responseTime = 10
+comfortableGap := (LeadPosition[t] - HostPosition[t] >= 10*dSafe)
+closeToDesired := (abs(HostVelocity[t] - cruiseSpeed) < cruisePctTol*cruiseSpeed)
+cruiseWhenNotImpeded := alw_[0,T] (comfortableGap => (comfortableGap until_[0, responseTime] closeToDesired)) 
+
+# it's not the case that host car just arbitrarily stops without the lead car having stopped first
+param reallySmallSpeed = 0.1
+dontStopUnlessLeadStops := not((LeadVelocity[t] > reallySmallSpeed) until_[0,T] (HostVelocity[t] < reallySmallSpeed))
+
+## Additional requirements
+
+# whenever actual distance is less than dSafe, the host car should decelerate or have 0 acceleration within the next 3 seconds
+negativeAcceleration := alw_[0,T] (((LeadPosition[t] - HostPosition[t]) < dSafe) => ev_[0, 3](HostAcceleration[t] <= 0))
+
+# the cars do not collide at any point in time even if the relative distance is less than dSafe
+# this constraint is mainly useful in cases when the lead car stops/brakes unexpectedly due to emergency
+# this results in relative distance < dSafe, but we want to ensure that they never collide even when safeFollowing constraint is violated
+noCollision := alw_[0,T] ((LeadPosition[t] - HostPosition[t]) > 0)
