@@ -1,6 +1,6 @@
 %% Initialize
 
-clear; close all; clc;
+clear all; close all; clc;
 
 %% Simulink Model
 
@@ -20,7 +20,7 @@ K_v = -1;
 K_rv = 5;
 
 % Safe distance (in meters)
-safeDist = 10;
+safeDist = 15;
 
 % Vehicle length is 4.7m by default, so adjust safe distance w.r.t. ego car
 vehicleLength = 4.7;
@@ -37,9 +37,19 @@ x0_lead = 50;
 egoVel = 10;
 leadVel = 20;
 
+% Min ego and lead car velocity (in m/s)
+egoMinVel = 0;
+leadMinVel = 5;
+
 % Max ego and lead car velocity (in m/s)
 egoMaxVel = 40;
-leadMaxVel = 40;
+leadMaxVel = 5;
+
+%% Create array data structure to store the ego and lead velocities and their relative distances
+
+egoParams = [];
+leadParams = [];
+relative_distance = [];
 
 %% Generate driving scenario
 
@@ -99,20 +109,21 @@ positionSelector = [1 0 0 0; 0 0 1 0]; % Position selector
 velocitySelector = [0 1 0 0; 0 0 0 1]; % Velocity selector
 
 % Create the display and return a handle to the bird's-eye plot
-BEP = createDemoDisplay(egoCar, sensors);
+% BEP = createDemoDisplay(egoCar, sensors);
 
 %% Optional Plotting
 
 % chasePlot(egoCar,'Centerline','on');
 % set(gcf, 'Name', 'Chase Plot');
 % plot(sc,'RoadCenters','on','Centerline','on');
-% ylim([-30 30]);
+% ylim([-10 10]);
 
 %% Driving simulation
 
-sc.SampleTime = 1; % Can use 0.1, 0.01, etc
-sc.StopTime = Inf; % Can be set to any finite time
+sc.SampleTime = 0.5; % Can use 0.1, 0.01, etc
+sc.StopTime = 10; % Can be set to any finite time
 dt = sc.SampleTime;
+timeFrame = dt:dt:sc.StopTime;
 
 % Accumulated or total distance covered by ego car
 S = x0_ego;
@@ -125,10 +136,10 @@ leadFlag = false;
 leadVel_prev = leadVel;
 
 % Run simulation
-while advance(sc) && ishghandle(BEP.Parent)
+while advance(sc) % && ishghandle(BEP.Parent)
     leadCar.Position = [leadS 0 0];
     
-    % Increase lead velocity to max and decrease to 0
+    % Increase lead velocity to max and decrease to min
     if leadFlag
         leadVel = leadVel_prev + 1;
     elseif ~leadFlag
@@ -136,8 +147,8 @@ while advance(sc) && ishghandle(BEP.Parent)
     end
     
     % Make sure car does not go backwards or exceed max limit
-    if leadVel < 0
-        leadVel = 0;
+    if leadVel < leadMinVel
+        leadVel = leadMinVel;
         leadFlag = true;
     elseif leadVel > leadMaxVel
         leadVel = leadMaxVel;
@@ -156,24 +167,27 @@ while advance(sc) && ishghandle(BEP.Parent)
     egoVel = egoVel + egoAcc * dt;
     
     % Make sure car does not go backwards or exceed max limit
-    if egoVel < 0
-        egoVel = 0;
+    if egoVel < egoMinVel
+        egoVel = egoMinVel;
     elseif egoVel > egoMaxVel
         egoVel = egoMaxVel;
     end
     
     disp('Relative Distance = ');
     disp(dRelative);
+    relative_distance = [relative_distance, dRelative];
     disp('Lead Velocity = ');
     disp(leadPoses.Velocity(1));
+    leadParams = [leadParams, leadVel];
     disp('Ego Velocity = ');
     disp(egoVel);
+    egoParams = [egoParams, egoVel];
     
     S = S + egoVel * dt;
     egoCar.Position = [S 0 0];
-    updatePlots(sc);
-    drawnow;
-    pause(0.001);
+    %     updatePlots(sc);
+    %     drawnow;
+    %     pause(0.001);
     
     % Get the scenario time
     time = sc.SimulationTime;
@@ -207,9 +221,24 @@ while advance(sc) && ishghandle(BEP.Parent)
         confirmedTracks = updateTracks(tracker, detectionClusters, time);
         
         % Update bird's-eye plot
-        updateBEP(BEP, egoCar, detections, confirmedTracks, positionSelector, velocitySelector);
+        % updateBEP(BEP, egoCar, detections, confirmedTracks, positionSelector, velocitySelector);
     end
 end
+
+figure;
+subplot(2, 1, 1);
+plot(timeFrame, egoParams, timeFrame, leadParams);
+legend('EgoVel', 'LeadVel');
+title('Velocities of Cars');
+xlabel('Time');
+ylabel('Velocity (m/s)');
+subplot(2, 1, 2);
+plot(timeFrame, relative_distance, 'DisplayName', 'Relative Distances');
+title('Relative Distance between Ego and Lead Cars');
+xlabel('Time');
+ylabel('Distance (m)');
+
+%% TODO: Robustness Check
 
 %% Initialize a constant velocity filter based on a detection
 
