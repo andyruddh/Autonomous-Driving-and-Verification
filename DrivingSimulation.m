@@ -1,6 +1,6 @@
 %% Initialize
 
-clear all; close all; clc;
+clear; close all; clc;
 
 %% Simulink Model
 
@@ -109,14 +109,14 @@ positionSelector = [1 0 0 0; 0 0 1 0]; % Position selector
 velocitySelector = [0 1 0 0; 0 0 0 1]; % Velocity selector
 
 % Create the display and return a handle to the bird's-eye plot
-% BEP = createDemoDisplay(egoCar, sensors);
+BEP = createDemoDisplay(egoCar, sensors);
 
 %% Optional Plotting
 
-% chasePlot(egoCar,'Centerline','on');
-% set(gcf, 'Name', 'Chase Plot');
-% plot(sc,'RoadCenters','on','Centerline','on');
-% ylim([-10 10]);
+chasePlot(egoCar,'Centerline','on');
+set(gcf, 'Name', 'Chase Plot');
+plot(sc,'RoadCenters','on','Centerline','on');
+ylim([-10 10]);
 
 %% Driving simulation
 
@@ -136,7 +136,7 @@ leadFlag = false;
 leadVel_prev = leadVel;
 
 % Run simulation
-while advance(sc) % && ishghandle(BEP.Parent)
+while advance(sc) && ishghandle(BEP.Parent)
     leadCar.Position = [leadS 0 0];
     
     % Increase lead velocity to max and decrease to min
@@ -185,9 +185,9 @@ while advance(sc) % && ishghandle(BEP.Parent)
     
     S = S + egoVel * dt;
     egoCar.Position = [S 0 0];
-    %     updatePlots(sc);
-    %     drawnow;
-    %     pause(0.001);
+    updatePlots(sc);
+    drawnow;
+    pause(0.001);
     
     % Get the scenario time
     time = sc.SimulationTime;
@@ -221,7 +221,7 @@ while advance(sc) % && ishghandle(BEP.Parent)
         confirmedTracks = updateTracks(tracker, detectionClusters, time);
         
         % Update bird's-eye plot
-        % updateBEP(BEP, egoCar, detections, confirmedTracks, positionSelector, velocitySelector);
+        updateBEP(BEP, egoCar, detections, confirmedTracks, positionSelector, velocitySelector);
     end
 end
 
