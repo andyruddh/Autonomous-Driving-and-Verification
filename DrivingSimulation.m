@@ -120,8 +120,8 @@ ylim([-10 10]);
 
 %% Driving simulation
 
-sc.SampleTime = 0.5; % Can use 0.1, 0.01, etc
-sc.StopTime = 10; % Can be set to any finite time
+sc.SampleTime = 0.01; % Can use 0.1, 0.01, etc
+sc.StopTime = 100; % Can be set to any finite time
 dt = sc.SampleTime;
 timeFrame = dt:dt:sc.StopTime;
 
