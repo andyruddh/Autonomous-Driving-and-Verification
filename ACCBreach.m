@@ -124,7 +124,7 @@ for jj=1:min(numSimulations, 5)
     subplot(3,1,3);
     plot(tspan,trace(4,:),'-r.',tspan,trace(5,:),'-bx');
 end
-
+S.PlotSignals();
 %% Check requirements
 
 STL_ReadFile('ACC_Requirements.stl');
